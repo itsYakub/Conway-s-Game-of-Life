@@ -105,16 +105,22 @@ bool	gamePollEvents(void) {
 
 			case (ButtonPress):
 			case (ButtonRelease): {
-
+				g_game.input.key[_event.xbutton.button] = (_event.xbutton.type == ButtonPress ? true : false);
 			} break;
 
 			case (MotionNotify): {
-
+				g_game.input.motion[0] = _event.xmotion.x;
+				g_game.input.motion[1] = _event.xmotion.y;
 			} break;
 
 			case (KeyPress):
 			case (KeyRelease): {
+				KeySym	_keysym;
+				
+				_keysym = XkbKeycodeToKeysym(g_game.cli.dsp, _event.xkey.keycode, 0, _event.xkey.state & ShiftMask ? 1 : 0);
+				g_game.input.key[_keysym] = (_event.xkey.type == KeyPress ? true : false);
 
+				g_game.exit = g_game.input.key[XK_Escape];
 			} break;
 		}
 	}
@@ -164,6 +170,31 @@ double	gameTime(void) {
 		return (0.0);
 	}
 	return (_timeval.tv_sec * 1000.0 + _timeval.tv_usec / 1000.0);
+}
+
+/* SECTION:
+ *  Input
+ * */
+bool	gameKeyPressed(const uint32_t index) {
+	return (g_game.input.key[index]);
+}
+
+bool	gameButtonPress(const uint32_t index) {
+	return (g_game.input.mouse[index]);
+}
+
+bool	gameButtonMotion(uint32_t *xptr, uint32_t *yptr) {
+	if (xptr) { *xptr = g_game.input.motion[0]; }
+	if (yptr) { *yptr = g_game.input.motion[1]; }
+	return (true);
+}
+
+uint32_t	gameMotionX(void) {
+	return (g_game.input.motion[0]);
+}
+
+uint32_t	gameMotionY(void) {
+	return (g_game.input.motion[1]);
 }
 
 /* SECTION:

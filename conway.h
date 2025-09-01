@@ -31,10 +31,17 @@ struct s_time {
 	double		t_delta;
 };
 
+struct s_input {
+	int32_t	motion[2];
+	bool	key[65536];
+	bool	mouse[8];
+};
+
 struct s_game {
 	struct s_client		cli;	/* client */
 	struct s_display	dsp;	/* display */
-	struct s_time		time;	/* time */
+	struct s_time		time;
+	struct s_input		input;
 	bool				exit;
 };
 
@@ -61,5 +68,14 @@ bool	gameClearColor(const uint32_t);
  * */
 double	gameDeltaTime(void);
 double	gameTime(void);
+
+/* SECTION:
+ *  Input
+ * */
+bool		gameKeyPressed(const uint32_t);
+bool		gameButtonPress(const uint32_t);
+bool		gameMotion(uint32_t *, uint32_t *);
+uint32_t	gameMotionX(void);
+uint32_t	gameMotionY(void);
 
 #endif /* _conway_h_ */
