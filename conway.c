@@ -4,16 +4,40 @@
 #include "./dl/dl-xlib.h"
 
 int	main(void) {
+	struct s_conway	conway = { 0 };
+
 	dl_loadXlib();
 	gameInit(800, 600, "Conway's Game of Life");
 
+	gameConwayInit(&conway, 16);
+	gameConwayTogglePixel(&conway, 1, 1);
 	while (!gameShouldQuit()) {
+		/* SECTION: Update
+		 * */
+		if (conway.update) {
+			gameConwayProceed(&conway);
+		}
+		else {
+			if (gameButtonPressed(Button1)) {
+				/* TODO(yakub):
+				 *  Toggle pixels on button press...
+				 * */
+			}
+		}
+
+		/* SECTION: Render
+		 * */
 		gameClearColor(0xff0f0f0f);
 
+		gameConwayRender(&conway, 0, 0);
 		gameSwapBuffers();
+
+		/* SECTION: Event polling
+		 * */
 		gamePollEvents();
 	}
 
+	gameConwayTerminate(&conway);
 	gameQuit();
 	dl_unloadXlib();
 }
@@ -21,6 +45,7 @@ int	main(void) {
 /* SECTION:
  *  Game
  * */
+
 bool	gameInit(const uint32_t w, const uint32_t h, const char *t) {
 	XWindowAttributes	_attr;
 
@@ -34,6 +59,7 @@ bool	gameInit(const uint32_t w, const uint32_t h, const char *t) {
 		if (!g_game.dsp.data) {
 			return (false);
 		}
+		printf("[ INFO ] GAME: DISPLAY: Created successfully | w.:%d | h.:%d\n", w, h);
 	}
 
 	/* SECTION:
@@ -76,6 +102,8 @@ bool	gameInit(const uint32_t w, const uint32_t h, const char *t) {
 		XStoreName(g_game.cli.dsp, g_game.cli.w_id, t);
 		XSelectInput(g_game.cli.dsp, g_game.cli.w_id, KeyPressMask | KeyReleaseMask | PointerMotionMask | ButtonPressMask | ButtonReleaseMask);
 		XMapWindow(g_game.cli.dsp, g_game.cli.w_id);
+		
+		printf("[ INFO ] GAME: WINDOW: Created successfully | w.:%d | h.:%d\n", w, h);
 	}
 	
 	/* SECTION:
@@ -92,7 +120,12 @@ bool	gameShouldQuit(void) {
 }
 
 bool	gamePollEvents(void) {
-	XEvent	_event;
+	register uint32_t	i;
+	register uint32_t	s;
+	XEvent				_event;
+
+	for (i = 0, s = sizeof(g_game.input.b_curr); i < s; i++) { g_game.input.b_prev[i] = g_game.input.b_curr[i]; }
+	for (i = 0, s = sizeof(g_game.input.k_curr); i < s; i++) { g_game.input.k_prev[i] = g_game.input.k_curr[i]; }
 
 	while (XPending(g_game.cli.dsp)) {
 		XNextEvent(g_game.cli.dsp, &_event);
@@ -105,12 +138,13 @@ bool	gamePollEvents(void) {
 
 			case (ButtonPress):
 			case (ButtonRelease): {
-				g_game.input.key[_event.xbutton.button] = (_event.xbutton.type == ButtonPress ? true : false);
+				if (_event.xbutton.button < 0 || _event.xbutton.button >= sizeof(g_game.input.b_curr)) { break; }
+				g_game.input.b_curr[_event.xbutton.button] = (_event.xbutton.type == ButtonPress ? true : false);
 			} break;
 
 			case (MotionNotify): {
-				g_game.input.motion[0] = _event.xmotion.x;
-				g_game.input.motion[1] = _event.xmotion.y;
+				g_game.input.m_curr[0] = _event.xmotion.x;
+				g_game.input.m_curr[1] = _event.xmotion.y;
 			} break;
 
 			case (KeyPress):
@@ -118,9 +152,8 @@ bool	gamePollEvents(void) {
 				KeySym	_keysym;
 				
 				_keysym = XkbKeycodeToKeysym(g_game.cli.dsp, _event.xkey.keycode, 0, _event.xkey.state & ShiftMask ? 1 : 0);
-				g_game.input.key[_keysym] = (_event.xkey.type == KeyPress ? true : false);
-
-				g_game.exit = g_game.input.key[XK_Escape];
+				if (_keysym < 0 || _keysym >= sizeof(g_game.input.k_curr)) { break; }
+				g_game.input.k_curr[_keysym] = (_event.xkey.type == KeyPress ? true : false);
 			} break;
 		}
 	}
@@ -143,12 +176,14 @@ bool	gameQuit(void) {
 	XUnmapWindow(g_game.cli.dsp, g_game.cli.w_id);
 	XDestroyWindow(g_game.cli.dsp, g_game.cli.w_id);
 	XCloseDisplay(g_game.cli.dsp);
+	printf("[ INFO ] GAME: Terminated successfully\n");
 	return (true);
 }
 
 /* SECTION:
- *  Graphics
+ *  Display
  * */
+
 bool	gameClearColor(const uint32_t pix) {
 	for (register size_t i = 0, siz = g_game.dsp.width * g_game.dsp.height; i < siz; i++) {
 		g_game.dsp.data[i] = pix;
@@ -156,9 +191,19 @@ bool	gameClearColor(const uint32_t pix) {
 	return (true);
 }
 
+bool	gameDrawRect(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h, const uint32_t p) {
+	for (register uint32_t y0 = y, y1 = y + h; y0 > 0 && y0 < g_game.dsp.height && y0 < y1; y0++) {
+		for (register uint32_t x0 = x, x1 = x + h; x0 > 0 && x0 < g_game.dsp.width && x0 < x1; x0++) {
+			g_game.dsp.data[y0 * g_game.dsp.width + x0] = p;
+		}
+	}
+	return (true);
+}
+
 /* SECTION:
  *  Time
  * */
+
 double	gameDeltaTime(void) {
 	return (g_game.time.t_delta);
 }
@@ -175,26 +220,110 @@ double	gameTime(void) {
 /* SECTION:
  *  Input
  * */
+
 bool	gameKeyPressed(const uint32_t index) {
-	return (g_game.input.key[index]);
+	return (g_game.input.k_curr[index] && !g_game.input.k_prev[index]);
 }
 
-bool	gameButtonPress(const uint32_t index) {
-	return (g_game.input.mouse[index]);
+bool	gameKeyReleased(const uint32_t index) {
+	return (!g_game.input.k_curr[index] && g_game.input.k_prev[index]);
+}
+
+bool	gameKeyDown(const uint32_t index) {
+	return (g_game.input.k_curr[index]);
+}
+
+bool	gameKeyUp(const uint32_t index) {
+	return (!g_game.input.k_curr[index]);
+}
+
+bool	gameButtonPressed(const uint32_t index) {
+	return (g_game.input.b_curr[index] && !g_game.input.b_prev[index]);
+}
+
+bool	gameButtonReleased(const uint32_t index) {
+	return (!g_game.input.b_curr[index] && g_game.input.b_prev[index]);
+}
+
+bool	gameButtonDown(const uint32_t index) {
+	return (g_game.input.b_curr[index]);
+}
+
+bool	gameButtonUp(const uint32_t index) {
+	return (!g_game.input.b_curr[index]);
 }
 
 bool	gameButtonMotion(uint32_t *xptr, uint32_t *yptr) {
-	if (xptr) { *xptr = g_game.input.motion[0]; }
-	if (yptr) { *yptr = g_game.input.motion[1]; }
+	if (xptr) { *xptr = g_game.input.m_curr[0]; }
+	if (yptr) { *yptr = g_game.input.m_curr[1]; }
 	return (true);
 }
 
 uint32_t	gameMotionX(void) {
-	return (g_game.input.motion[0]);
+	return (g_game.input.m_curr[0]);
 }
 
 uint32_t	gameMotionY(void) {
-	return (g_game.input.motion[1]);
+	return (g_game.input.m_curr[1]);
+}
+
+/* SECTION:
+ *  Conway
+ * */
+
+bool	gameConwayInit(struct s_conway *conway, const uint32_t s) {
+	if (!conway) { return (false); }
+
+	conway->width = g_game.dsp.width / s + 1;
+	conway->height = g_game.dsp.height / s + 1;
+	conway->cell_size = s;
+	conway->data = (uint32_t *) calloc(conway->width * conway->height, sizeof(uint32_t));
+	if (!conway->data) {
+		return (false);
+	}
+	printf("[ INFO ] CONWAY: Created successfully | w.:%d | h.:%d | s.:%d\n", conway->width, conway->height, conway->cell_size);
+	return (true);
+}
+
+bool	gameConwayTogglePixel(struct s_conway *conway, const uint32_t x, const uint32_t y) {
+	if (!conway) { return (false); }
+
+	if (x < 0 || x >= conway->width) { return (false); }
+	if (y < 0 || y >= conway->height) { return (false); }
+	conway->data[y * conway->width + x] = !conway->data[y * conway->width + x];
+	printf("[ INFO ] CONWAY: Pixel toggled | x.:%d | y.:%d\n", x, y);
+	return (true);
+}
+
+bool	gameConwayProceed(struct s_conway *conway) {
+	if (!conway) { return (false); }
+
+	/* TODO(yakub):
+	 *  Update the current life cycle based on the rules of CGOL
+	 * */
+	return (true);
+}
+
+bool	gameConwayRender(struct s_conway *conway, const uint32_t x, const uint32_t y) {
+	if (!conway) { return (false); }
+
+	for (uint32_t y0 = 0; y0 < conway->height; y0++) {
+		for (uint32_t x0 = 0; x0 < conway->width; x0++) {
+			if (conway->data[y0 * conway->width + x0]) {
+				gameDrawRect(x + (x0 * conway->cell_size), y + (y0 * conway->cell_size), conway->cell_size, conway->cell_size, 0xffffffff);
+			}
+		}
+	}
+	return (true);
+}
+
+bool	gameConwayTerminate(struct s_conway *conway) {
+	if (!conway) { return (false); }
+
+	free(conway->data), conway->data = 0;
+	conway->cell_size = conway->width = conway->height = 0;
+	printf("[ INFO ] CONWAY: Terminated successfully\n");
+	return (true);
 }
 
 /* SECTION:

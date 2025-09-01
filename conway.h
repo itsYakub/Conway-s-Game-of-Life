@@ -8,11 +8,18 @@
 # include <X11/Xlib.h>
 # include <sys/time.h>
 
+/* SECTION:
+ *  Display
+ * */
+
 struct s_display {
 	uint32_t	*data;
 	uint32_t	width;
 	uint32_t	height;
 };
+
+bool	gameClearColor(const uint32_t);
+bool	gameDrawRect(const uint32_t, const uint32_t, const uint32_t, const uint32_t, const uint32_t);
 
 struct s_client {
 	Display		*dsp;
@@ -25,17 +32,46 @@ struct s_client {
 	Window		r_id;
 };
 
+/* SECTION:
+ *  Time
+ * */
+
 struct s_time {
 	double		t_curr;
 	double		t_prev;
 	double		t_delta;
 };
 
+double	gameDeltaTime(void);
+double	gameTime(void);
+
+/* SECTION:
+ *  Input
+ * */
+
 struct s_input {
-	int32_t	motion[2];
-	bool	key[65536];
-	bool	mouse[8];
+	int32_t	m_curr[2];		/* motion (current) */
+	bool	k_curr[1024];	/* key (current) */
+	bool	k_prev[1024];	/* key (previous) */
+	bool	b_curr[8];		/* button (current) */
+	bool	b_prev[8];		/* button (previous) */
 };
+
+bool		gameKeyPressed(const uint32_t);
+bool		gameKeyReleased(const uint32_t);
+bool		gameKeyDown(const uint32_t);
+bool		gameKeyUp(const uint32_t);
+bool		gameButtonPressed(const uint32_t);
+bool		gameButtonReleased(const uint32_t);
+bool		gameButtonDown(const uint32_t);
+bool		gameButtonUp(const uint32_t);
+bool		gameMotion(uint32_t *, uint32_t *);
+uint32_t	gameMotionX(void);
+uint32_t	gameMotionY(void);
+
+/* SECTION:
+ *  Game
+ * */
 
 struct s_game {
 	struct s_client		cli;	/* client */
@@ -45,37 +81,30 @@ struct s_game {
 	bool				exit;
 };
 
-/* Global 'game' object
- * */
-extern struct s_game	g_game;
-
-/* SECTION:
- *  Game
- * */
 bool	gameInit(const uint32_t, const uint32_t, const char *);
 bool	gameShouldQuit(void);
 bool	gamePollEvents(void);
 bool	gameSwapBuffers(void);
 bool	gameQuit(void);
 
-/* SECTION:
- *  Graphics
- * */
-bool	gameClearColor(const uint32_t);
+extern struct s_game	g_game;
 
 /* SECTION:
- *  Time
+ *  Conway
  * */
-double	gameDeltaTime(void);
-double	gameTime(void);
 
-/* SECTION:
- *  Input
- * */
-bool		gameKeyPressed(const uint32_t);
-bool		gameButtonPress(const uint32_t);
-bool		gameMotion(uint32_t *, uint32_t *);
-uint32_t	gameMotionX(void);
-uint32_t	gameMotionY(void);
+struct s_conway {
+	uint32_t	*data;
+	uint32_t	width;
+	uint32_t	height;
+	uint32_t	cell_size;
+	bool		update;
+};
+
+bool	gameConwayInit(struct s_conway *, const uint32_t);
+bool	gameConwayTogglePixel(struct s_conway *, const uint32_t, const uint32_t);
+bool	gameConwayProceed(struct s_conway *);
+bool	gameConwayRender(struct s_conway *, const uint32_t, const uint32_t);
+bool	gameConwayTerminate(struct s_conway *);
 
 #endif /* _conway_h_ */
