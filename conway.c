@@ -77,6 +77,13 @@ bool	gameInit(const uint32_t w, const uint32_t h, const char *t) {
 		XSelectInput(g_game.cli.dsp, g_game.cli.w_id, KeyPressMask | KeyReleaseMask | PointerMotionMask | ButtonPressMask | ButtonReleaseMask);
 		XMapWindow(g_game.cli.dsp, g_game.cli.w_id);
 	}
+	
+	/* SECTION:
+	 *  Client Creation
+	 * */
+	{
+		g_game.time.t_curr = g_game.time.t_prev = gameTime();
+	}
 	return (true);
 }
 
@@ -111,6 +118,12 @@ bool	gamePollEvents(void) {
 			} break;
 		}
 	}
+
+	/* Update game timing
+	 * */
+	g_game.time.t_prev = g_game.time.t_curr;
+	g_game.time.t_curr = gameTime();
+	g_game.time.t_delta = (g_game.time.t_curr - g_game.time.t_prev) / 1000.0;
 	return (true);
 }
 
@@ -135,6 +148,22 @@ bool	gameClearColor(const uint32_t pix) {
 		g_game.dsp.data[i] = pix;
 	}
 	return (true);
+}
+
+/* SECTION:
+ *  Time
+ * */
+double	gameDeltaTime(void) {
+	return (g_game.time.t_delta);
+}
+
+double	gameTime(void) {
+	struct timeval	_timeval;
+
+	if (gettimeofday(&_timeval, 0) < 0) {
+		return (0.0);
+	}
+	return (_timeval.tv_sec * 1000.0 + _timeval.tv_usec / 1000.0);
 }
 
 /* SECTION:

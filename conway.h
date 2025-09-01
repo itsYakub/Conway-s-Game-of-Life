@@ -6,6 +6,7 @@
 # include <stdlib.h>
 # include <stdbool.h>
 # include <X11/Xlib.h>
+# include <sys/time.h>
 
 struct s_display {
 	uint32_t	*data;
@@ -24,9 +25,16 @@ struct s_client {
 	Window		r_id;
 };
 
+struct s_time {
+	double		t_curr;
+	double		t_prev;
+	double		t_delta;
+};
+
 struct s_game {
 	struct s_client		cli;	/* client */
 	struct s_display	dsp;	/* display */
+	struct s_time		time;	/* time */
 	bool				exit;
 };
 
@@ -47,5 +55,11 @@ bool	gameQuit(void);
  *  Graphics
  * */
 bool	gameClearColor(const uint32_t);
+
+/* SECTION:
+ *  Time
+ * */
+double	gameDeltaTime(void);
+double	gameTime(void);
 
 #endif /* _conway_h_ */
