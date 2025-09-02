@@ -20,6 +20,7 @@ struct s_display {
 
 bool	gameClearColor(const uint32_t);
 bool	gameDrawRect(const uint32_t, const uint32_t, const uint32_t, const uint32_t, const uint32_t);
+bool	gameDrawRectLines(const uint32_t, const uint32_t, const uint32_t, const uint32_t, const uint32_t);
 
 struct s_client {
 	Display		*dsp;
@@ -94,17 +95,29 @@ extern struct s_game	g_game;
  * */
 
 struct s_conway {
-	uint32_t	*data;
+	uint32_t	*data0;
+	uint32_t	*data1;
+	
 	uint32_t	width;
 	uint32_t	height;
 	uint32_t	cell_size;
-	bool		update;
+
+	uint32_t	generation;
+	uint32_t	population;
+
+	double		time_default;
+	double		time_tick;
+	double		time_current;
 };
 
 bool	gameConwayInit(struct s_conway *, const uint32_t);
 bool	gameConwayTogglePixel(struct s_conway *, const uint32_t, const uint32_t);
+bool	gameConwayGetState(struct s_conway *, const uint32_t, const uint32_t);
+bool	gameConwayGetNeighboursCount(struct s_conway *, const uint32_t, const uint32_t, uint32_t *);
+bool	gameConwayClear(struct s_conway *);
 bool	gameConwayProceed(struct s_conway *);
-bool	gameConwayRender(struct s_conway *, const uint32_t, const uint32_t);
+bool	gameConwayRender(struct s_conway *);
+bool	gameConwayRenderGrid(struct s_conway *);
 bool	gameConwayTerminate(struct s_conway *);
 
 #endif /* _conway_h_ */
