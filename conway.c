@@ -143,14 +143,14 @@ bool	gamePollEvents(void) {
 		XNextEvent(g_game.cli.dsp, &_event);
 		switch (_event.type) {
 			case (ClientMessage): {
-				if (_event.xclient.data.l[0] == g_game.cli.wm_delete_window) {
+				if (_event.xclient.data.l[0] == (int64_t) g_game.cli.wm_delete_window) {
 					g_game.exit = true;
 				}
 			} break;
 
 			case (ButtonPress):
 			case (ButtonRelease): {
-				if (_event.xbutton.button < 0 || _event.xbutton.button >= sizeof(g_game.input.b_curr)) { break; }
+				if (_event.xbutton.button >= sizeof(g_game.input.b_curr)) { break; }
 				g_game.input.b_curr[_event.xbutton.button] = (_event.xbutton.type == ButtonPress ? true : false);
 			} break;
 
@@ -164,7 +164,7 @@ bool	gamePollEvents(void) {
 				KeySym	_keysym;
 				
 				_keysym = XkbKeycodeToKeysym(g_game.cli.dsp, _event.xkey.keycode, 0, _event.xkey.state & ShiftMask ? 1 : 0);
-				if (_keysym < 0 || _keysym >= sizeof(g_game.input.k_curr)) { break; }
+				if (_keysym >= sizeof(g_game.input.k_curr)) { break; }
 				g_game.input.k_curr[_keysym] = (_event.xkey.type == KeyPress ? true : false);
 			} break;
 		}
@@ -205,8 +205,8 @@ bool	gameClearColor(const uint32_t pix) {
 }
 
 bool	gameDrawRect(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h, const uint32_t p) {
-	for (register uint32_t y0 = y, y1 = y + h; y0 >= 0 && y0 < g_game.dsp.height && y0 < y1; y0++) {
-		for (register uint32_t x0 = x, x1 = x + h; x0 >= 0 && x0 < g_game.dsp.width && x0 < x1; x0++) {
+	for (register uint32_t y0 = y, y1 = y + h; y0 < g_game.dsp.height && y0 < y1; y0++) {
+		for (register uint32_t x0 = x, x1 = x + w; x0 < g_game.dsp.width && x0 < x1; x0++) {
 			g_game.dsp.data[y0 * g_game.dsp.width + x0] = p;
 		}
 	}
@@ -214,8 +214,8 @@ bool	gameDrawRect(const uint32_t x, const uint32_t y, const uint32_t w, const ui
 }
 
 bool	gameDrawRectLines(const uint32_t x, const uint32_t y, const uint32_t w, const uint32_t h, const uint32_t p) {
-	for (register uint32_t y0 = y, y1 = y + h; y0 >= 0 && y0 < g_game.dsp.height && y0 < y1; y0++) {
-		for (register uint32_t x0 = x, x1 = x + h; x0 >= 0 && x0 < g_game.dsp.width && x0 < x1; x0++) {
+	for (register uint32_t y0 = y, y1 = y + h; y0 < g_game.dsp.height && y0 < y1; y0++) {
+		for (register uint32_t x0 = x, x1 = x + w; x0 < g_game.dsp.width && x0 < x1; x0++) {
 			if ((y0 == 0 || y0 == y1 - 1) ||
 				(x0 == 0 || x0 == x1 - 1)
 			) {
@@ -331,8 +331,8 @@ bool	gameConwayInit(struct s_conway *conway, const uint32_t s) {
 bool	gameConwayTogglePixel(struct s_conway *conway, const uint32_t x, const uint32_t y) {
 	if (!conway) { return (false); }
 
-	if (x < 0 || x >= conway->width) { return (false); }
-	if (y < 0 || y >= conway->height) { return (false); }
+	if (x >= conway->width) { return (false); }
+	if (y >= conway->height) { return (false); }
 	conway->data0[y * conway->width + x] = !conway->data0[y * conway->width + x];
 	printf("[ INFO ] CONWAY: Pixel toggled | x.:%d | y.:%d\n", x, y);
 	return (true);
@@ -341,8 +341,8 @@ bool	gameConwayTogglePixel(struct s_conway *conway, const uint32_t x, const uint
 bool	gameConwayGetState(struct s_conway *conway, const uint32_t x, const uint32_t y) {
 	if (!conway) { return (false); }
 	
-	if (x < 0 || x >= conway->width) { return (false); }
-	if (y < 0 || y >= conway->height) { return (false); }
+	if (x >= conway->width) { return (false); }
+	if (y >= conway->height) { return (false); }
 	return (conway->data0[y * conway->width + x]);
 }
 
