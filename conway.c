@@ -18,6 +18,9 @@ int	main(void) {
 		if (gameButtonPressed(Button1)) { gameConwayTogglePixel(&conway, gameMotionX() / conway.cell_size, gameMotionY() / conway.cell_size); }
 		if (gameKeyPressed('c')) { gameConwayClear(&conway); }
 
+		if (gameKeyPressed(' ')) {
+			gameConwayProceed(&conway);
+		}
 		if (gameKeyDown(' ')) {
 			if (conway.time_current > 0.0) {
 				conway.time_current -= gameDeltaTime();
@@ -182,6 +185,7 @@ bool	gameSwapBuffers(void) {
 
 bool	gameQuit(void) {
 	XDestroyImage(g_game.cli.img);
+	XFreeGC(g_game.cli.dsp, g_game.cli.gc);
 	XUnmapWindow(g_game.cli.dsp, g_game.cli.w_id);
 	XDestroyWindow(g_game.cli.dsp, g_game.cli.w_id);
 	XCloseDisplay(g_game.cli.dsp);

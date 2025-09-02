@@ -120,4 +120,8 @@ bool	gameConwayRender(struct s_conway *);
 bool	gameConwayRenderGrid(struct s_conway *);
 bool	gameConwayTerminate(struct s_conway *);
 
+/* SECTION:
+ *  Presets
+ * */
+
 #endif /* _conway_h_ */
