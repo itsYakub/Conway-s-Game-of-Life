@@ -3,8 +3,27 @@
 #define DL_IMPL
 #include "./dl/dl-xlib.h"
 
-int	main(void) {
+int	main(int ac, char **av) {
 	struct s_conway	conway;
+
+	if (ac > 1) {
+		if (!strcmp(av[1], "-v") || !strcmp(av[1], "--version")) {
+			printf("[ INFO ] GAME: Version: 1.0\n");
+		}
+		else if (!strcmp(av[1], "-h") || !strcmp(av[1], "--help")) {
+			printf("[ INFO ] GAME: Help message:\n");
+			printf("\n1. KEYBOARD:\n");
+			printf("- SPACE (press)  - Update the simulation (once);\n");
+			printf("- SPACE (hold)   - Update the simulation (conitnuous);\n");
+			printf("- C (press)      - Clear the simulation grid and data;\n");
+			printf("\n2. MOUSE:\n");
+			printf("- LEFT (press)   - Toggle cell state (alive/dead)\n");
+			printf("\n3. FLAGS:\n");
+			printf("- -h / --help    - prints this help message and quits the program\n");
+			printf("- -v / --version - prints the game's version and quits the program\n");
+		}
+		return (0);
+	}
 
 	dl_loadXlib();
 	gameInit(960, 640, "Conway's Game of Life");
