@@ -34,7 +34,13 @@ int	main(int ac, char **av) {
 		/* SECTION: Update
 		 * */
 	
-		if (gameButtonPressed(Button1)) { gameConwayTogglePixel(&conway, gameMotionX() / conway.cell_size, gameMotionY() / conway.cell_size); }
+		if (gameButtonPressed(Button1)) {
+			gameConwayTogglePixel(
+				&conway,
+				(gameMotionX() + (conway.x * -1)) / conway.s,
+				(gameMotionY() + (conway.x * -1)) / conway.s
+			);
+		}
 		if (gameKeyPressed('c')) { gameConwayClear(&conway); }
 
 		if (gameKeyPressed(' ')) {
@@ -319,10 +325,11 @@ uint32_t	gameMotionY(void) {
 bool	gameConwayInit(struct s_conway *conway, const uint32_t s) {
 	if (!conway) { return (false); }
 
-	conway->width = g_game.dsp.width / s;
-	conway->height = g_game.dsp.height / s;
-	conway->cell_size = s;
-	conway->data0 = (uint32_t *) calloc(conway->width * conway->height, sizeof(uint32_t));
+
+	conway->w = 256;
+	conway->h = 256;
+	conway->s = s;
+	conway->data0 = (uint32_t *) calloc(conway->w * conway->h, sizeof(uint32_t));
 	if (!conway->data0) {
 		return (false);
 	}
@@ -332,10 +339,15 @@ bool	gameConwayInit(struct s_conway *conway, const uint32_t s) {
 	 *  - if we can apply the rules for cells in data0, we copy it to data1;
 	 *  - at the end of the iteration we copy all the data1 cells into data0;
 	 * */
-	conway->data1 = (uint32_t *) calloc(conway->width * conway->height, sizeof(uint32_t));
+	conway->data1 = (uint32_t *) calloc(conway->w * conway->h, sizeof(uint32_t));
 	if (!conway->data1) {
 		return (false);
 	}
+
+	/* Set the position to the center of the grid
+	 * */
+	conway->x = conway->w / 2.0 - g_game.dsp.width / 2.0;
+	conway->y = conway->y / 2.0 - g_game.dsp.height / 2.0;
 
 	/* Setup timinig variables of the simulation
 	 * */
@@ -343,16 +355,16 @@ bool	gameConwayInit(struct s_conway *conway, const uint32_t s) {
 	conway->time_tick = 0.1;
 	conway->time_current = conway->time_default;
 
-	printf("[ INFO ] CONWAY: Created successfully | w.:%d | h.:%d | s.:%d\n", conway->width, conway->height, conway->cell_size);
+	printf("[ INFO ] CONWAY: Created successfully | w.:%d | h.:%d | s.:%d\n", conway->w, conway->h, conway->s);
 	return (true);
 }
 
 bool	gameConwayTogglePixel(struct s_conway *conway, const uint32_t x, const uint32_t y) {
 	if (!conway) { return (false); }
 
-	if (x >= conway->width) { return (false); }
-	if (y >= conway->height) { return (false); }
-	conway->data0[y * conway->width + x] = !conway->data0[y * conway->width + x];
+	if (x >= conway->w) { return (false); }
+	if (y >= conway->h) { return (false); }
+	conway->data0[y * conway->w + x] = !conway->data0[y * conway->w + x];
 	printf("[ INFO ] CONWAY: Pixel toggled | x.:%d | y.:%d\n", x, y);
 	return (true);
 }
@@ -360,9 +372,9 @@ bool	gameConwayTogglePixel(struct s_conway *conway, const uint32_t x, const uint
 bool	gameConwayGetState(struct s_conway *conway, const uint32_t x, const uint32_t y) {
 	if (!conway) { return (false); }
 	
-	if (x >= conway->width) { return (false); }
-	if (y >= conway->height) { return (false); }
-	return (conway->data0[y * conway->width + x]);
+	if (x >= conway->w) { return (false); }
+	if (y >= conway->h) { return (false); }
+	return (conway->data0[y * conway->w + x]);
 }
 
 bool	gameConwayGetNeighboursCount(struct s_conway *conway, const uint32_t x, const uint32_t y, uint32_t *ptr) {
@@ -384,7 +396,7 @@ bool	gameConwayGetNeighboursCount(struct s_conway *conway, const uint32_t x, con
 bool	gameConwayClear(struct s_conway *conway) {
 	if (!conway) { return (false); }
 
-	for (register uint32_t i = 0, s = conway->width * conway->height; i < s; i++) {
+	for (register uint32_t i = 0, s = conway->w * conway->h; i < s; i++) {
 		conway->data0[i] = false;
 	}
 	conway->generation = conway->population = 0;
@@ -397,10 +409,10 @@ bool	gameConwayProceed(struct s_conway *conway) {
 
 	conway->generation++;
 	conway->population = 0;
-	for (register uint32_t i = 0, s = conway->width * conway->height; i < s; i++) { conway->data1[i] = false; }
+	for (register uint32_t i = 0, s = conway->w * conway->h; i < s; i++) { conway->data1[i] = false; }
 
-	for (register uint32_t y0 = 0, y1 = conway->height; y0 < y1; y0++) {
-		for (register uint32_t x0 = 0, x1 = conway->width; x0 < x1; x0++) {
+	for (register uint32_t y0 = 0, y1 = conway->h; y0 < y1; y0++) {
+		for (register uint32_t x0 = 0, x1 = conway->w; x0 < x1; x0++) {
 			uint32_t	_neighbours;
 
 			_neighbours = 0;
@@ -440,7 +452,7 @@ bool	gameConwayProceed(struct s_conway *conway) {
 			}
 		}
 	}
-	for (register uint32_t i = 0, s = conway->width * conway->height; i < s; i++) {
+	for (register uint32_t i = 0, s = conway->w * conway->h; i < s; i++) {
 		if (conway->data1[i]) {
 			conway->population++;
 		}
@@ -455,10 +467,15 @@ bool	gameConwayProceed(struct s_conway *conway) {
 bool	gameConwayRender(struct s_conway *conway) {
 	if (!conway) { return (false); }
 
-	for (uint32_t y0 = 0; y0 < conway->height; y0++) {
-		for (uint32_t x0 = 0; x0 < conway->width; x0++) {
-			if (conway->data0[y0 * conway->width + x0]) {
-				gameDrawRect(x0 * conway->cell_size, y0 * conway->cell_size, conway->cell_size, conway->cell_size, 0xffffffff);
+	for (uint32_t y0 = 0; y0 < conway->h; y0++) {
+		for (uint32_t x0 = 0; x0 < conway->w; x0++) {
+			if (conway->data0[y0 * conway->w + x0]) {
+				gameDrawRect(
+					(x0 * conway->s) + conway->x,
+					(y0 * conway->s) + conway->y - conway->s * 2,
+					conway->s, conway->s,
+					0xffffffff
+				);
 			}
 		}
 	}
@@ -468,9 +485,9 @@ bool	gameConwayRender(struct s_conway *conway) {
 bool	gameConwayRenderGrid(struct s_conway *conway) {
 	if (!conway) { return (false); }
 	
-	for (uint32_t y0 = 0; y0 < conway->height; y0++) {
-		for (uint32_t x0 = 0; x0 < conway->width; x0++) {
-			gameDrawRectLines(x0 * conway->cell_size, y0 * conway->cell_size, conway->cell_size, conway->cell_size, 0xff000000);
+	for (uint32_t y0 = 0; y0 < conway->h; y0++) {
+		for (uint32_t x0 = 0; x0 < conway->w; x0++) {
+			gameDrawRectLines(x0 * conway->s, y0 * conway->s, conway->s, conway->s, 0xff000000);
 		}
 	}
 	return (true);
@@ -481,7 +498,7 @@ bool	gameConwayTerminate(struct s_conway *conway) {
 
 	free(conway->data0), conway->data0 = 0;
 	free(conway->data1), conway->data1 = 0;
-	conway->cell_size = conway->width = conway->height = 0;
+	conway->s = conway->w = conway->h = 0;
 	printf("[ INFO ] CONWAY: Terminated successfully\n");
 	return (true);
 }
