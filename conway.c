@@ -38,9 +38,17 @@ int	main(int ac, char **av) {
 			gameConwayTogglePixel(
 				&conway,
 				(gameMotionX() + (conway.x * -1)) / conway.s,
-				(gameMotionY() + (conway.x * -1)) / conway.s
+				(gameMotionY() + (conway.y * -1)) / conway.s
 			);
 		}
+	
+		if (gameButtonDown(Button3)) {
+			conway.x += gameMotionDeltaX();
+			conway.y += gameMotionDeltaY();
+		}
+
+		
+		
 		if (gameKeyPressed('c')) { gameConwayClear(&conway); }
 
 		if (gameKeyPressed(' ')) {
@@ -65,7 +73,6 @@ int	main(int ac, char **av) {
 		gameClearColor(0xff0f0f0f);
 
 		gameConwayRender(&conway);
-		gameConwayRenderGrid(&conway);
 		gameSwapBuffers();
 
 		/* SECTION: Event polling
@@ -163,6 +170,8 @@ bool	gamePollEvents(void) {
 
 	for (i = 0, s = sizeof(g_game.input.b_curr); i < s; i++) { g_game.input.b_prev[i] = g_game.input.b_curr[i]; }
 	for (i = 0, s = sizeof(g_game.input.k_curr); i < s; i++) { g_game.input.k_prev[i] = g_game.input.k_curr[i]; }
+	g_game.input.m_prev[0] = g_game.input.m_curr[0];
+	g_game.input.m_prev[1] = g_game.input.m_curr[1];
 
 	while (XPending(g_game.cli.dsp)) {
 		XNextEvent(g_game.cli.dsp, &_event);
@@ -304,7 +313,7 @@ bool	gameButtonUp(const uint32_t index) {
 	return (!g_game.input.b_curr[index]);
 }
 
-bool	gameButtonMotion(uint32_t *xptr, uint32_t *yptr) {
+bool	gameMotion(uint32_t *xptr, uint32_t *yptr) {
 	if (xptr) { *xptr = g_game.input.m_curr[0]; }
 	if (yptr) { *yptr = g_game.input.m_curr[1]; }
 	return (true);
@@ -316,6 +325,20 @@ uint32_t	gameMotionX(void) {
 
 uint32_t	gameMotionY(void) {
 	return (g_game.input.m_curr[1]);
+}
+
+bool	gameMotionDelta(uint32_t *xptr, uint32_t *yptr) {
+	if (xptr) { *xptr = g_game.input.m_curr[0] - g_game.input.m_prev[0]; }
+	if (yptr) { *yptr = g_game.input.m_curr[1] - g_game.input.m_prev[1]; }
+	return (true);
+}
+
+uint32_t	gameMotionDeltaX(void) {
+	return (g_game.input.m_curr[0] - g_game.input.m_prev[0]);
+}
+
+uint32_t	gameMotionDeltaY(void) {
+	return (g_game.input.m_curr[1] - g_game.input.m_prev[1]);
 }
 
 /* SECTION:
@@ -346,8 +369,8 @@ bool	gameConwayInit(struct s_conway *conway, const uint32_t s) {
 
 	/* Set the position to the center of the grid
 	 * */
-	conway->x = conway->w / 2.0 - g_game.dsp.width / 2.0;
-	conway->y = conway->y / 2.0 - g_game.dsp.height / 2.0;
+	conway->x = 0;
+	conway->y = 0;
 
 	/* Setup timinig variables of the simulation
 	 * */
@@ -472,22 +495,17 @@ bool	gameConwayRender(struct s_conway *conway) {
 			if (conway->data0[y0 * conway->w + x0]) {
 				gameDrawRect(
 					(x0 * conway->s) + conway->x,
-					(y0 * conway->s) + conway->y - conway->s * 2,
+					(y0 * conway->s) + conway->y,
 					conway->s, conway->s,
 					0xffffffff
 				);
 			}
-		}
-	}
-	return (true);
-}
-
-bool	gameConwayRenderGrid(struct s_conway *conway) {
-	if (!conway) { return (false); }
-	
-	for (uint32_t y0 = 0; y0 < conway->h; y0++) {
-		for (uint32_t x0 = 0; x0 < conway->w; x0++) {
-			gameDrawRectLines(x0 * conway->s, y0 * conway->s, conway->s, conway->s, 0xff000000);
+			gameDrawRectLines(
+				(x0 * conway->s) + conway->x,
+				(y0 * conway->s) + conway->y,
+				conway->s, conway->s,
+				0xff000000
+			);
 		}
 	}
 	return (true);

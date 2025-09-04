@@ -52,6 +52,7 @@ double	gameTime(void);
 
 struct s_input {
 	int32_t	m_curr[2];		/* motion (current) */
+	int32_t	m_prev[2];		/* motion (previous) */
 	bool	k_curr[1024];	/* key (current) */
 	bool	k_prev[1024];	/* key (previous) */
 	bool	b_curr[8];		/* button (current) */
@@ -69,6 +70,10 @@ bool		gameButtonUp(const uint32_t);
 bool		gameMotion(uint32_t *, uint32_t *);
 uint32_t	gameMotionX(void);
 uint32_t	gameMotionY(void);
+bool		gameMotionDelta(uint32_t *, uint32_t *);
+uint32_t	gameMotionDeltaX(void);
+uint32_t	gameMotionDeltaY(void);
+
 
 /* SECTION:
  *  Game
@@ -119,7 +124,6 @@ bool	gameConwayGetNeighboursCount(struct s_conway *, const uint32_t, const uint3
 bool	gameConwayClear(struct s_conway *);
 bool	gameConwayProceed(struct s_conway *);
 bool	gameConwayRender(struct s_conway *);
-bool	gameConwayRenderGrid(struct s_conway *);
 bool	gameConwayTerminate(struct s_conway *);
 
 /* SECTION:
