@@ -74,6 +74,29 @@ bool		gameMotionDelta(uint32_t *, uint32_t *);
 uint32_t	gameMotionDeltaX(void);
 uint32_t	gameMotionDeltaY(void);
 
+/* SECTION:
+ *  Event
+ * */
+
+struct s_event {
+	bool	(*callback_button)(void *, uint32_t, uint32_t);
+	void	*callback_button_data;
+
+	bool	(*callback_scroll)(void *, int32_t, int32_t);
+	void	*callback_scroll_data;
+
+	bool	(*callback_motion)(void *, uint32_t, uint32_t);
+	void	*callback_motion_data;
+
+	bool	(*callback_key)(void *, uint32_t, uint32_t);
+	void	*callback_key_data;
+};
+
+bool	gamePollEvents(void);
+bool	gameSetButtonCallback(bool (*)(void *, uint32_t, uint32_t), void *);
+bool	gameSetScrollCallback(bool (*)(void *, int32_t, int32_t), void *);
+bool	gameSetMotionCallback(bool (*)(void *, uint32_t, uint32_t), void *);
+bool	gameSetKeyCallback(bool (*)(void *, uint32_t, uint32_t), void *);
 
 /* SECTION:
  *  Game
@@ -84,12 +107,12 @@ struct s_game {
 	struct s_display	dsp;	/* display */
 	struct s_time		time;
 	struct s_input		input;
+	struct s_event		event;
 	bool				exit;
 };
 
 bool	gameInit(const uint32_t, const uint32_t, const char *);
 bool	gameShouldQuit(void);
-bool	gamePollEvents(void);
 bool	gameSwapBuffers(void);
 bool	gameQuit(void);
 

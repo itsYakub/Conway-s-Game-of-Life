@@ -3,6 +3,18 @@
 #define DL_IMPL
 #include "./dl/dl-xlib.h"
 
+static bool	__gameScrollCallback(void *data, int32_t x, int32_t y) {
+	struct s_conway	*conway;
+
+	(void) x;
+	conway = (struct s_conway *) data;
+	if (!conway) {
+		return (false);
+	}
+	conway->s += y;
+	return (true);
+}
+
 int	main(int ac, char **av) {
 	struct s_conway	conway;
 
@@ -30,6 +42,7 @@ int	main(int ac, char **av) {
 
 	conway = (struct s_conway) { 0 };
 	gameConwayInit(&conway, 16);
+	gameSetScrollCallback(__gameScrollCallback, &conway);
 	while (!gameShouldQuit()) {
 		/* SECTION: Update
 		 * */
@@ -47,8 +60,9 @@ int	main(int ac, char **av) {
 			conway.y += gameMotionDeltaY();
 		}
 
-		
-		
+
+
+
 		if (gameKeyPressed('c')) { gameConwayClear(&conway); }
 
 		if (gameKeyPressed(' ')) {
@@ -85,6 +99,9 @@ int	main(int ac, char **av) {
 	gameQuit();
 	dl_unloadXlib();
 }
+
+/* ============================================================================
+ * */
 
 /* SECTION:
  *  Game
@@ -161,55 +178,6 @@ bool	gameInit(const uint32_t w, const uint32_t h, const char *t) {
 
 bool	gameShouldQuit(void) {
 	return (g_game.exit);
-}
-
-bool	gamePollEvents(void) {
-	register uint32_t	i;
-	register uint32_t	s;
-	XEvent				_event;
-
-	for (i = 0, s = sizeof(g_game.input.b_curr); i < s; i++) { g_game.input.b_prev[i] = g_game.input.b_curr[i]; }
-	for (i = 0, s = sizeof(g_game.input.k_curr); i < s; i++) { g_game.input.k_prev[i] = g_game.input.k_curr[i]; }
-	g_game.input.m_prev[0] = g_game.input.m_curr[0];
-	g_game.input.m_prev[1] = g_game.input.m_curr[1];
-
-	while (XPending(g_game.cli.dsp)) {
-		XNextEvent(g_game.cli.dsp, &_event);
-		switch (_event.type) {
-			case (ClientMessage): {
-				if (_event.xclient.data.l[0] == (int64_t) g_game.cli.wm_delete_window) {
-					g_game.exit = true;
-				}
-			} break;
-
-			case (ButtonPress):
-			case (ButtonRelease): {
-				if (_event.xbutton.button >= sizeof(g_game.input.b_curr)) { break; }
-				g_game.input.b_curr[_event.xbutton.button] = (_event.xbutton.type == ButtonPress ? true : false);
-			} break;
-
-			case (MotionNotify): {
-				g_game.input.m_curr[0] = _event.xmotion.x;
-				g_game.input.m_curr[1] = _event.xmotion.y;
-			} break;
-
-			case (KeyPress):
-			case (KeyRelease): {
-				KeySym	_keysym;
-				
-				_keysym = XkbKeycodeToKeysym(g_game.cli.dsp, _event.xkey.keycode, 0, _event.xkey.state & ShiftMask ? 1 : 0);
-				if (_keysym >= sizeof(g_game.input.k_curr)) { break; }
-				g_game.input.k_curr[_keysym] = (_event.xkey.type == KeyPress ? true : false);
-			} break;
-		}
-	}
-
-	/* Update game timing
-	 * */
-	g_game.time.t_prev = g_game.time.t_curr;
-	g_game.time.t_curr = gameTime();
-	g_game.time.t_delta = (g_game.time.t_curr - g_game.time.t_prev) / 1000.0;
-	return (true);
 }
 
 bool	gameSwapBuffers(void) {
@@ -339,6 +307,93 @@ uint32_t	gameMotionDeltaX(void) {
 
 uint32_t	gameMotionDeltaY(void) {
 	return (g_game.input.m_curr[1] - g_game.input.m_prev[1]);
+}
+
+/* SECTION:
+ *  Event
+ * */
+
+bool	gamePollEvents(void) {
+	XEvent	_event;
+
+	memcpy(g_game.input.b_prev, g_game.input.b_curr, sizeof(g_game.input.b_prev));
+	memcpy(g_game.input.k_prev, g_game.input.k_curr, sizeof(g_game.input.k_prev));
+	memcpy(g_game.input.m_prev, g_game.input.m_curr, sizeof(g_game.input.m_prev));
+	while (XPending(g_game.cli.dsp)) {
+		XNextEvent(g_game.cli.dsp, &_event);
+		switch (_event.type) {
+			case (ClientMessage): {
+				if (_event.xclient.data.l[0] == (int64_t) g_game.cli.wm_delete_window) {
+					g_game.exit = true;
+				}
+			} break;
+
+			case (ButtonPress):
+			case (ButtonRelease): {
+				if (_event.xbutton.button >= sizeof(g_game.input.b_curr)) { break; }
+				g_game.input.b_curr[_event.xbutton.button] = (_event.xbutton.type == ButtonPress ? true : false);
+				if (g_game.event.callback_button) {
+					g_game.event.callback_button(g_game.event.callback_button_data, _event.xbutton.button, _event.xbutton.type == ButtonPress ? true : false);
+				}
+				if (_event.xbutton.type == ButtonPress && (_event.xbutton.button == Button4 || _event.xbutton.button == Button5)) {
+					if (g_game.event.callback_scroll) {
+						g_game.event.callback_scroll(g_game.event.callback_scroll_data, 0, _event.xbutton.button == Button4 ? 1 : -1);
+					}
+				}
+			} break;
+
+			case (MotionNotify): {
+				g_game.input.m_curr[0] = _event.xmotion.x;
+				g_game.input.m_curr[1] = _event.xmotion.y;
+				if (g_game.event.callback_motion) {
+					g_game.event.callback_motion(g_game.event.callback_motion_data, _event.xmotion.x, _event.xmotion.y);
+				}
+			} break;
+
+			case (KeyPress):
+			case (KeyRelease): {
+				KeySym	_keysym;
+
+				_keysym = XkbKeycodeToKeysym(g_game.cli.dsp, _event.xkey.keycode, 0, _event.xkey.state & ShiftMask ? 1 : 0);
+				if (_keysym >= sizeof(g_game.input.k_curr)) { break; }
+				g_game.input.k_curr[_keysym] = (_event.xkey.type == KeyPress ? true : false);
+				if (g_game.event.callback_key) {
+					g_game.event.callback_key(g_game.event.callback_key_data, _keysym, _event.xkey.type == KeyPress ? true : false);
+				}
+			} break;
+		}
+	}
+
+	/* Update game timing
+	 * */
+	g_game.time.t_prev = g_game.time.t_curr;
+	g_game.time.t_curr = gameTime();
+	g_game.time.t_delta = (g_game.time.t_curr - g_game.time.t_prev) / 1000.0;
+	return (true);
+}
+
+bool	gameSetButtonCallback(bool (*f)(void *, uint32_t, uint32_t), void *data) {
+	g_game.event.callback_button = f;
+	g_game.event.callback_button_data = data;
+	return (true);
+}
+
+bool	gameSetScrollCallback(bool (*f)(void *, int32_t, int32_t), void *data) {
+	g_game.event.callback_scroll = f;
+	g_game.event.callback_scroll_data = data;
+	return (true);
+}
+
+bool	gameSetMotionCallback(bool (*f)(void *, uint32_t, uint32_t), void *data) {
+	g_game.event.callback_motion = f;
+	g_game.event.callback_motion_data = data;
+	return (true);
+}
+
+bool	gameSetKeyCallback(bool (*f)(void *, uint32_t, uint32_t), void *data) {
+	g_game.event.callback_key = f;
+	g_game.event.callback_key_data = data;
+	return (true);
 }
 
 /* SECTION:
