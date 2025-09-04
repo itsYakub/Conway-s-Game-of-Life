@@ -26,13 +26,15 @@ int	main(int ac, char **av) {
 			printf("[ INFO ] GAME: Help message:\n");
 			printf("\n1. KEYBOARD:\n");
 			printf("- SPACE (press)  - Update the simulation (once);\n");
-			printf("- SPACE (hold)   - Update the simulation (conitnuous);\n");
-			printf("- C (press)      - Clear the simulation grid and data;\n");
+			printf("- SPACE (hold)   - Update the simulation (continuous);\n");
+			printf("- C (press)      - Clear the simulation grid;\n");
 			printf("\n2. MOUSE:\n");
-			printf("- LEFT (press)   - Toggle cell state (alive/dead)\n");
+			printf("- LEFT (press)   - Toggle cell state (alive/dead);\n");
+			printf("- RIGHT (press)  - Camera panning;\n");
+			printf("- SCROLL         - Camera zooming in/out;\n");
 			printf("\n3. FLAGS:\n");
-			printf("- -h / --help    - prints this help message and quits the program\n");
-			printf("- -v / --version - prints the game's version and quits the program\n");
+			printf("- -h / --help    - prints this help message and quits the program;\n");
+			printf("- -v / --version - prints the game's version and quits the program;\n");
 		}
 		return (0);
 	}
